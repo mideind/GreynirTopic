@@ -72,12 +72,10 @@ setup(
     license="MIT",
     description="Text similarity and topic indexing for Icelandic",
     long_description="{0}\n{1}".format(
-        re
-            .compile("^.. start-badges.*^.. end-badges", re.M | re.S)
-            .sub("", read("README.rst")),
-        re
-            .sub(":[a-z]+:`~?(.*?)`", r"``\1``", read("CHANGELOG.rst")),
+        read("README.md"),
+        read("CHANGELOG.md"),
     ),
+    long_description_content_type="text/markdown",
     author="Miðeind ehf",
     author_email="mideind@mideind.is",
     url="https://github.com/mideind/GreynirTopic",
@@ -112,6 +110,6 @@ setup(
     ],
     keywords=["topic", "similarity", "tf-idf", "lsi", "icelandic"],
     setup_requires=[],
-    install_requires=[],
+    install_requires=["gensim==3.8.3"],
     entry_points={},
 )
