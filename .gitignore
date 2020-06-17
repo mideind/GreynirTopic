@@ -132,4 +132,4 @@ dmypy.json
 .pyre/
 
 # Don't include generated models
-# src/greynir_topic/models/
+src/greynir_topic/models/
