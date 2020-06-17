@@ -27,22 +27,14 @@
         TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
         SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-    This module is written in Python 3
-
-    This module reads documents as bags-of-words
-    and indexes them using Latent Semantic Indexing (LSI, also called Latent Semantic
-    Analysis, LSA), with indexes generated with the help of the Gensim document
-    processing module.
+    This module reads documents as bags-of-words and indexes them using
+    Latent Semantic Indexing (LSI, also called Latent Semantic Analysis, LSA),
+    with indexes generated with the help of the Gensim document processing module.
 
     The indexing proceeds in stages (cf. https://radimrehurek.com/gensim/tut2.html):
 
-    1) Conversion of document contents
-        into a corpus stream, yielding each document as a bag-of-words
-        via the CorpusIterator class. The corpus stream is
-        filtered so that it only contains significant verbs,
-        nouns, adjectives and person and entity names - all normalized
-        (i.e. verbs to 'nafnháttur', nouns to nominative singular, and
-        adjectives to normal nominative singular masculine).
+    1) Conversion of document contents into a corpus stream, yielding
+        each document as a bag-of-words via the CorpusIterator class.
 
     2) Generation of a Gensim dictionary (vocabulary) across the corpus stream,
         cutting out rare words, resulting in a word count vector.
@@ -65,7 +57,6 @@ from typing import Iterator, Tuple, List, Union, Optional
 
 import os
 import sys
-import time
 from abc import ABC, abstractmethod
 
 from gensim import corpora, models, matutils  # type: ignore
@@ -74,15 +65,9 @@ from gensim import corpora, models, matutils  # type: ignore
 # A TopicVector is a sparse array of floats,
 # i.e. a list of (index, content) tuples
 TopicVector = List[Tuple[int, float]]
-# A LemmaTuple contains two strings, the lemma and its category
-LemmaTuple = Tuple[str, str]
+
 # A LemmaString contains a lemma and its category, separated by a slash '/'
 LemmaString = str
-
-
-def w_from_lemma(lemma: str, cat: str) -> LemmaString:
-    """ Convert a (lemma, cat) tuple to a bag-of-words key """
-    return lemma.lower().replace("-", "").replace(" ", "_") + "/" + cat
 
 
 class Document(ABC):
@@ -91,8 +76,8 @@ class Document(ABC):
         pass
 
     @abstractmethod
-    def __iter__(self) -> Iterator[LemmaTuple]:
-        """ Yield a stream of (lemma, cat) tuples from the document """
+    def __iter__(self) -> Iterator[LemmaString]:
+        """ Yield a stream of lemmas from the document """
         ...
 
 
@@ -141,14 +126,14 @@ class CorpusIterator:
             a bag of words for each of them """
         xform = self._xform
         for document in self._corpus:
-            lemmas = [w_from_lemma(lemma, cat) for lemma, cat in document]
+            lemmas = [lemma for lemma in document]
             if lemmas:
                 yield xform(lemmas)
 
 
 class Model:
 
-    """ Wraps the document indexing functionality """
+    """ Wraps the topic vector modeling functionality """
 
     # Default number of dimensions in topic vectors
     _DEFAULT_DIMENSIONS = 200
@@ -300,17 +285,13 @@ class Model:
             os.remove(self.tfidf_corpus_filename)
 
     def topic_vector(
-        self, lemmas: Union[List[LemmaTuple], List[LemmaString]]
+        self, lemmas: List[LemmaString]
     ) -> TopicVector:
         """ Return a sparse topic vector for a list of lemmas,
             which can contain either "lemma/category" strings or
             ("lemma", "category") tuples. """
         if not lemmas:
             return []
-        if isinstance(lemmas[0], tuple):
-            lemmas = [w_from_lemma(lemma, cat) for lemma, cat in lemmas]
-        else:
-            assert all("/" in lemma for lemma in lemmas)  # Must contain a slash
         if self._dictionary is None:
             self.load_dictionary()
         assert self._dictionary is not None

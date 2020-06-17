@@ -2,7 +2,7 @@
 
     test_model.py
 
-    Tests for the GreynirTopic module
+    Tests for the GreynirTopic Model and TupleModel modules
 
     Copyright (C) 2020 by Miðeind ehf.
 
@@ -35,12 +35,13 @@
 import pytest
 
 from greynir_topic import Model, Document, Corpus, Dictionary
-from greynir_topic.model import CorpusIterator, w_from_lemma
+from greynir_topic.model import CorpusIterator
+from greynir_topic.tuplemodel import w_from_lemma
 
 
 @pytest.fixture(scope="module")
 def model():
-    """ Provide a module-scoped GreynirCorrect instance as a test fixture """
+    """ Provide a module-scoped Model instance as a test fixture """
     # For testing purposes, there is no lower bound threshold
     # on lemma occurrences in the dictionary
     g = Model("test", min_count=0)
@@ -56,7 +57,7 @@ def test_basics():
     assert w_from_lemma("dóms- og kirkjumálaráðherra", "kk") == "dóms_og_kirkjumálaráðherra/kk"  # !!! FIXME
 
 
-class TestDocument(Document):
+class DummyDocument(Document):
 
     def __init__(self, lemmas):
         self._lemmas = lemmas
@@ -65,34 +66,25 @@ class TestDocument(Document):
         yield from self._lemmas
 
 
-class TestCorpus(Corpus):
-
-    @staticmethod
-    def make_lemma(s):
-        a = s.split("/")
-        return a[0], a[1]
-
-    @staticmethod
-    def make_lemmas(s):
-        return [TestCorpus.make_lemma(w) for w in s.split()]
+class DummyCorpus(Corpus):
 
     def __iter__(self):
-        yield TestDocument(
-            TestCorpus.make_lemmas("maður/kk fara/so út/ao í/fs búð/kvk")
+        yield DummyDocument(
+            "maður/kk fara/so út/ao í/fs búð/kvk".split()
         )
-        yield TestDocument(
-            TestCorpus.make_lemmas("búð/kvk vera/so lokaður/lo")
+        yield DummyDocument(
+            "búð/kvk vera/so lokaður/lo".split()
         )
-        yield TestDocument(
-            TestCorpus.make_lemmas("maður/kk vera/so leiður/lo")
+        yield DummyDocument(
+            "maður/kk vera/so leiður/lo".split()
         )
-        yield TestDocument(
-            TestCorpus.make_lemmas("hægur/lo vera/so að/nhm kaupa/so matur/kk í/fs búð/kvk")
+        yield DummyDocument(
+            "hægur/lo vera/so að/nhm kaupa/so matur/kk í/fs búð/kvk".split()
         )
 
 
 def test_dictionary():
-    corpus = TestCorpus()
+    corpus = DummyCorpus()
     ci = CorpusIterator(corpus)
     d = Dictionary(ci)
     assert "maður/kk" in d
@@ -105,10 +97,12 @@ def test_init(model: Model):
 
 
 def test_train(model: Model):
-    corpus = TestCorpus()
+    corpus = DummyCorpus()
     model.train(corpus)
     s = ["maður/kk", "hundur/kk"]
     tv = model.topic_vector(s)
     s2 = ["maður/kk", "búð/kvk"]
     tv2 = model.topic_vector(s2)
+    tv3 = model.topic_vector(s2)
     assert model.similarity(tv, tv2) > 0.90
+    assert model.similarity(tv2, tv3) > 0.9999

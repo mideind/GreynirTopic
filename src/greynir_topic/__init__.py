@@ -35,6 +35,10 @@ from .model import (
     Dictionary,
     Model,
 )
+from .tuplemodel import (
+    TupleModel,
+    TupleDocument,
+)
 
 
 __author__ = u"Miðeind ehf"
