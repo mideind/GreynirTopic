@@ -130,3 +130,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Don't include generated models
+# src/greynir_topic/models/

@@ -156,12 +156,24 @@ class Model:
     # The default directory for model data files is the ./models directory
     _DIRECTORY = os.path.join(os.path.dirname(os.path.realpath(__file__)), "models")
 
-    def __init__(self, name: str, directory: str=None, dimensions: int=None) -> None:
+    def __init__(self, name: str, *,
+        directory: str=None,
+        dimensions: int=None,
+        min_count: int=3
+    ) -> None:
+        """ Create a model instance.
+            name: the name of the model, included in data file names.
+            directory: the directory where data files will be written.
+            dimensions: the topic vector dimensions, typically 200.
+            min_count: the minimum number of occurrences of a lemma
+                for it to be included in the model dictionary.
+        """
         self._name = name
         self._dimensions = dimensions or self._DEFAULT_DIMENSIONS
         if directory:
             # Override class-wide default for this model instance
             self._DIRECTORY = directory
+        self._min_count = min_count
         self._dictionary = None  # type: Optional[Dictionary]
         self._tfidf = None
         self._model = None
@@ -198,8 +210,14 @@ class Model:
         """ Iterate through the document corpus
             and create a fresh Gensim dictionary """
         dic = Dictionary(corpus_iterator)
-        # Drop words that only occur only once or twice in the entire set
-        dic.filter_extremes(no_below=3, keep_n=None)
+        # Drop words that only occur very few times in the entire set
+        if self._min_count > 0:
+            dic.filter_extremes(no_below=self._min_count, keep_n=None)
+            # !!! TODO: We may want to use other Gensim filtering
+            # !!! features, such as dropping lemmas that occur in
+            # !!! almost all documents
+        # We must have something in our dictionary
+        assert len(dic.token2id) > 0
         dic.save(self.dictionary_filename)
         self._dictionary = dic
 

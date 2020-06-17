@@ -41,7 +41,9 @@ from greynir_topic.model import CorpusIterator, w_from_lemma
 @pytest.fixture(scope="module")
 def model():
     """ Provide a module-scoped GreynirCorrect instance as a test fixture """
-    g = Model("test")
+    # For testing purposes, there is no lower bound threshold
+    # on lemma occurrences in the dictionary
+    g = Model("test", min_count=0)
     yield g
     # Do teardown here, if required
 
@@ -106,4 +108,7 @@ def test_train(model: Model):
     corpus = TestCorpus()
     model.train(corpus)
     s = ["maður/kk", "hundur/kk"]
-    print(model.topic_vector(s))
+    tv = model.topic_vector(s)
+    s2 = ["maður/kk", "búð/kvk"]
+    tv2 = model.topic_vector(s2)
+    assert model.similarity(tv, tv2) > 0.90
