@@ -9,7 +9,7 @@ python:
   - "3.6"
   - "3.7"
   - "3.8"
-  - "pypy3"
+#  - "pypy3"  # Does not currently support numpy/scipy fully enough for our purposes
 
 before_install:
   - python -m pip install --upgrade pip
