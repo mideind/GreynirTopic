@@ -143,22 +143,18 @@ class Model:
 
     def __init__(self, name: str, *,
         directory: str=None,
-        dimensions: int=None,
-        min_count: int=3
+        dimensions: int=None
     ) -> None:
         """ Create a model instance.
             name: the name of the model, included in data file names.
             directory: the directory where data files will be written.
             dimensions: the topic vector dimensions, typically 200.
-            min_count: the minimum number of occurrences of a lemma
-                for it to be included in the model dictionary.
         """
         self._name = name
         self._dimensions = dimensions or self._DEFAULT_DIMENSIONS
         if directory:
             # Override class-wide default for this model instance
             self._DIRECTORY = directory
-        self._min_count = min_count
         self._dictionary = None  # type: Optional[Dictionary]
         self._tfidf = None
         self._model = None
@@ -173,31 +169,31 @@ class Model:
 
     @property
     def plain_corpus_filename(self) -> str:
-        return self._filename_from_ext("corpus.mm")
+        return self._filename_from_ext("corpus")
 
     @property
     def tfidf_corpus_filename(self) -> str:
-        return self._filename_from_ext("corpus-tfidf.mm")
+        return self._filename_from_ext("corpus-tfidf")
 
     @property
     def tfidf_model_filename(self) -> str:
-        return self._filename_from_ext("tfidf.model")
+        return self._filename_from_ext("tfidf")
 
     @property
     def lsi_model_filename(self) -> str:
-        return self._filename_from_ext("lsi.model")
+        return self._filename_from_ext("lsi")
 
     @property
     def dimensions(self) -> int:
         return self._dimensions
 
-    def train_dictionary(self, corpus_iterator: CorpusIterator) -> None:
+    def train_dictionary(self, corpus_iterator: CorpusIterator, min_count: int) -> None:
         """ Iterate through the document corpus
             and create a fresh Gensim dictionary """
         dic = Dictionary(corpus_iterator)
         # Drop words that only occur very few times in the entire set
-        if self._min_count > 0:
-            dic.filter_extremes(no_below=self._min_count, keep_n=None)
+        if min_count > 0:
+            dic.filter_extremes(no_below=min_count, keep_n=None)
             # !!! TODO: We may want to use other Gensim filtering
             # !!! features, such as dropping lemmas that occur in
             # !!! almost all documents
@@ -265,12 +261,15 @@ class Model:
         """ Load a previously generated LSI model """
         self._model = models.LsiModel.load(self.lsi_model_filename, mmap="r")
 
-    def train(self, corpus: Corpus, *, keep_temp_files: bool=False) -> None:
+    def train(self, corpus: Corpus, *,
+        keep_temp_files: bool=False,
+        min_count: int=3
+    ) -> None:
         """ Go through all training steps for a document corpus,
             ending with an LSI model built on TF-IDF vectors
             for each document """
         self.train_dictionary(
-            CorpusIterator(corpus, dictionary=None)
+            CorpusIterator(corpus, dictionary=None), min_count=min_count
         )
         self.train_plain_corpus(
             CorpusIterator(corpus, dictionary=self._dictionary)
@@ -283,6 +282,9 @@ class Model:
             # used during training, not during inference
             os.remove(self.plain_corpus_filename)
             os.remove(self.tfidf_corpus_filename)
+            # Also remove additional index files created by Gensim
+            os.remove(self.plain_corpus_filename + ".index")
+            os.remove(self.tfidf_corpus_filename + ".index")
 
     def topic_vector(
         self, lemmas: List[LemmaString]

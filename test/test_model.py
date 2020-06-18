@@ -41,12 +41,16 @@ from greynir_topic.tuplemodel import w_from_lemma
 
 @pytest.fixture(scope="module")
 def model():
-    """ Provide a module-scoped Model instance as a test fixture """
-    # For testing purposes, there is no lower bound threshold
-    # on lemma occurrences in the dictionary
-    g = Model("test", min_count=0)
-    yield g
-    # Do teardown here, if required
+    """ Provide a module-scoped fresh Model instance as a test fixture """
+    yield Model("test")
+
+
+@pytest.fixture(scope="module")
+def trained_model():
+    """ Provide a module-scoped, trained Model instance as a test fixture """
+    m = Model("test")
+    test_train(m)
+    yield m
 
 
 def test_basics():
@@ -98,7 +102,9 @@ def test_init(model: Model):
 
 def test_train(model: Model):
     corpus = DummyCorpus()
-    model.train(corpus)
+    # For testing purposes, we include all lemmas in the dictionary,
+    # even the rare ones (which would be omitted by default in normal processing)
+    model.train(corpus, min_count=0)
     s = ["maður/kk", "hundur/kk"]
     tv = model.topic_vector(s)
     s2 = ["maður/kk", "búð/kvk"]
@@ -106,3 +112,16 @@ def test_train(model: Model):
     tv3 = model.topic_vector(s2)
     assert model.similarity(tv, tv2) > 0.90
     assert model.similarity(tv2, tv3) > 0.9999
+
+
+def test_load(trained_model: Model):
+    """ Test loading an existing model - assuming it's
+        already been trained in test_train() """
+    # Should not need to retrain the model
+    s = ["maður/kk", "hundur/kk"]
+    tv = trained_model.topic_vector(s)
+    s2 = ["maður/kk", "búð/kvk"]
+    tv2 = trained_model.topic_vector(s2)
+    tv3 = trained_model.topic_vector(s2)
+    assert trained_model.similarity(tv, tv2) > 0.90
+    assert trained_model.similarity(tv2, tv3) > 0.9999
