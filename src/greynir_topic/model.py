@@ -268,6 +268,11 @@ class Model:
         """ Go through all training steps for a document corpus,
             ending with an LSI model built on TF-IDF vectors
             for each document """
+        # Make sure that the models directory exists
+        try:
+            os.makedirs(self._DIRECTORY)
+        except FileExistsError:
+            pass
         self.train_dictionary(
             CorpusIterator(corpus, dictionary=None), min_count=min_count
         )

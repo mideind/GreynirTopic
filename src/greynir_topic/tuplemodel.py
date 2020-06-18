@@ -77,6 +77,7 @@ class TupleModel(Model):
         if not lemmas:
             return []
         if isinstance(lemmas[0], tuple):
+            lemmas = cast(List[LemmaTuple], lemmas)
             lemmas = [w_from_lemma(lemma, cat) for lemma, cat in lemmas]
         else:
             assert all("/" in lemma for lemma in lemmas)  # Must contain a slash
