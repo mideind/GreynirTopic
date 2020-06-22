@@ -267,7 +267,15 @@ class Model:
     ) -> None:
         """ Go through all training steps for a document corpus,
             ending with an LSI model built on TF-IDF vectors
-            for each document """
+            for each document.
+            corpus:
+                The document corpus to train the model on
+            keep_temp_files:
+                If True, do not delete intermediate model files after training
+            min_count:
+                Only keep lemmas in the dictionary that occur
+                at least min_count times in the corpus
+        """
         # Make sure that the models directory exists
         try:
             os.makedirs(self._DIRECTORY)
@@ -316,5 +324,5 @@ class Model:
 
     @staticmethod
     def similarity(topic_vector_a: TopicVector, topic_vector_b: TopicVector) -> float:
-        """ Return the cosine similarity between two sparse topic vectors """
+        """ Return the cosine similarity of two sparse topic vectors """
         return matutils.cossim(topic_vector_a, topic_vector_b)

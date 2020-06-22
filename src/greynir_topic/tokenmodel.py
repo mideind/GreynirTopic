@@ -1,8 +1,10 @@
 """
-
     Greynir: Natural language processing for Icelandic
 
+    Topic model subclasses using token streams
+
     Copyright (C) 2020 Miðeind ehf.
+    Original author: Vilhjálmur Þorsteinsson
 
     This software is licensed under the MIT License:
 
@@ -25,25 +27,45 @@
         TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
         SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+    This module subclasses the TupleModel class to support topic modeling
+    for token streams, using plug-in lemmatization.
+
 """
 
-# Expose the greynir-topic API
+from typing import Iterable, Union
 
-from .model import (
-    Document,
-    Corpus,
-    Dictionary,
-    Model,
-)
-from .tuplemodel import (
-    TupleModel,
-    TupleDocument,
-)
-from .tokenmodel import (
-    TokenDocument,
-)
+from .tuplemodel import TupleDocument, LemmaTuple
 
-__author__ = u"Miðeind ehf"
-__copyright__ = "(C) 2020 Miðeind ehf."
-# Remember to update the version in setup.py as well
-__version__ = "0.0.1"
+from reynir import tokenize, TOK
+
+
+StringIterable = Union[str, Iterable[str]]
+
+
+class TokenDocument(TupleDocument):
+
+    def __init__(self, text: StringIterable) -> None:
+        super().__init__()
+        self._text = text
+
+    def gen_tuples(self) -> Iterable[LemmaTuple]:
+        """ Generate (lemma, cat) tuples from the document """
+        for t in tokenize(self._text):
+            if t.kind == TOK.WORD:
+                if t.val:
+                    # Known word
+                    yield (t.val[0].stofn, t.val[0].ordfl)
+                else:
+                    # Unknown word
+                    yield (t.txt, "x")
+            elif t.kind == TOK.PERSON:
+                assert t.val
+                # Name, gender
+                yield (t.val[0][0], t.val[0][1])
+            elif t.kind == TOK.ENTITY:
+                # Entity name
+                yield (t.txt, "entity")
+            elif t.kind == TOK.COMPANY:
+                # Company name
+                yield (t.txt, "company")
+

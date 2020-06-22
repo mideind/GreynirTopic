@@ -110,6 +110,6 @@ setup(
     ],
     keywords=["topic", "similarity", "tf-idf", "lsi", "icelandic"],
     setup_requires=[],
-    install_requires=["gensim==3.8.3"],
+    install_requires=["gensim==3.8.3", "reynir>=2.3.1"],
     entry_points={},
 )

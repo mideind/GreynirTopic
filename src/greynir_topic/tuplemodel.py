@@ -33,7 +33,7 @@
 
 """
 
-from typing import Iterator, Tuple, List, Union, cast
+from typing import Iterator, Iterable, Tuple, List, Union, cast
 
 from abc import abstractmethod
 
@@ -55,7 +55,7 @@ class TupleDocument(Document):
         pass
 
     @abstractmethod
-    def gen_tuples(self) -> Iterator[LemmaTuple]:
+    def gen_tuples(self) -> Iterable[LemmaTuple]:
         ...
 
     def __iter__(self) -> Iterator[LemmaString]:

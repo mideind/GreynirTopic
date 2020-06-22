@@ -34,7 +34,7 @@
 
 import pytest
 
-from greynir_topic import Model, Document, Corpus, Dictionary
+from greynir_topic import Model, Document, TokenDocument, Corpus, Dictionary
 from greynir_topic.model import CorpusIterator
 from greynir_topic.tuplemodel import w_from_lemma
 
@@ -125,3 +125,35 @@ def test_load(trained_model: Model):
     tv3 = trained_model.topic_vector(s2)
     assert trained_model.similarity(tv, tv2) > 0.90
     assert trained_model.similarity(tv2, tv3) > 0.9999
+
+
+class TokenCorpus(Corpus):
+
+    def __iter__(self):
+        yield TokenDocument(
+            "Maður fór út í búð."
+        )
+        yield TokenDocument(
+            "Búðin var lokuð."
+        )
+        yield TokenDocument(
+            "Maðurinn varð leiður."
+        )
+        yield TokenDocument(
+            "Hægt er að kaupa mat í búðum."
+        )
+
+
+def test_train_token(model: Model):
+    corpus = TokenCorpus()
+    # For testing purposes, we include all lemmas in the dictionary,
+    # even the rare ones (which would be omitted by default in normal processing)
+    model.train(corpus, min_count=0)
+    s = ["maður/kk", "hundur/kk"]
+    tv = model.topic_vector(s)
+    s2 = ["maður/kk", "búð/kvk"]
+    tv2 = model.topic_vector(s2)
+    tv3 = model.topic_vector(s2)
+    assert model.similarity(tv, tv2) > 0.90
+    assert model.similarity(tv2, tv3) > 0.9999
+
