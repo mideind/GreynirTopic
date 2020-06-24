@@ -41,6 +41,7 @@ from .tuplemodel import (
 )
 from .tokenmodel import (
     TokenDocument,
+    ParsedDocument,
 )
 
 __author__ = u"Miðeind ehf"

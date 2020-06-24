@@ -51,17 +51,31 @@ def w_from_lemma(lemma: str, cat: str) -> LemmaString:
 
 class TupleDocument(Document):
 
+    """ A TupleDocument is an abstract Document class that produces its stream
+        of indexable content from a generator of (lemma, category)
+        tuples. This generator is an abstract method, to be overridden in
+        derived classes. """
+
     def __init__(self) -> None:
         pass
 
     @abstractmethod
     def gen_tuples(self) -> Iterable[LemmaTuple]:
+        """ Override this with a generator that yields (lemma, category) tuples """
         ...
+
+    def filter_tuple(self, lemma, cat) -> bool:
+        """ Overridable function to filter (lemma, cat) tuples before
+            they are returned from the document """
+        return True
 
     def __iter__(self) -> Iterator[LemmaString]:
         """ Yield a stream of lemmas from the document """
         for lemma, cat in self.gen_tuples():
-            yield w_from_lemma(lemma, cat)
+            # Do not include tuples that have no lemma or no category
+            # (the latter case includes punctuation and other non-text tokens)
+            if lemma and cat and self.filter_tuple(lemma, cat):
+                yield w_from_lemma(lemma, cat)
 
 
 class TupleModel(Model):

@@ -72,6 +72,9 @@ LemmaString = str
 
 class Document(ABC):
 
+    """ The basic abstract class representing a document, which
+        can be iterated over to produce indexable strings (usually lemmas). """
+
     def __init__(self) -> None:
         pass
 
@@ -82,6 +85,9 @@ class Document(ABC):
 
 
 class Corpus(ABC):
+
+    """ The basic abstract class representing a corpus of documents,
+        which can be iterated over to produce document instances. """
 
     def __init__(self) -> None:
         pass
@@ -101,16 +107,18 @@ class Dictionary(corpora.Dictionary):
         super().__init__(iterator)
 
     def __contains__(self, word: str) -> bool:
+        """ Return True if the given word/lemma is in the dictionary """
         return word in self.token2id
 
 
 class CorpusIterator:
 
-    """ Iterate through a collection of documents,
-        yielding a list of "lemma/cat" strings
-        or a bag-of-words for each document """
+    """ Iterate through a Corpus (collection of Document instances),
+        yielding a stream of indexable strings (usually of the form
+        "lemma/cat") that are collected into a bag-of-words for
+        each document. """
 
-    def __init__(self, corpus: Corpus, dictionary: Dictionary=None):
+    def __init__(self, corpus: Corpus, dictionary: Dictionary = None):
         self._corpus = corpus
         self._dictionary = dictionary
         if self._dictionary is not None:
@@ -141,9 +149,8 @@ class Model:
     # The default directory for model data files is the ./models directory
     _DIRECTORY = os.path.join(os.path.dirname(os.path.realpath(__file__)), "models")
 
-    def __init__(self, name: str, *,
-        directory: str=None,
-        dimensions: int=None
+    def __init__(
+        self, name: str, *, directory: str = None, dimensions: int = None
     ) -> None:
         """ Create a model instance.
             name: the name of the model, included in data file names.
@@ -261,9 +268,8 @@ class Model:
         """ Load a previously generated LSI model """
         self._model = models.LsiModel.load(self.lsi_model_filename, mmap="r")
 
-    def train(self, corpus: Corpus, *,
-        keep_temp_files: bool=False,
-        min_count: int=3
+    def train(
+        self, corpus: Corpus, *, keep_temp_files: bool = False, min_count: int = 3
     ) -> None:
         """ Go through all training steps for a document corpus,
             ending with an LSI model built on TF-IDF vectors
@@ -284,9 +290,7 @@ class Model:
         self.train_dictionary(
             CorpusIterator(corpus, dictionary=None), min_count=min_count
         )
-        self.train_plain_corpus(
-            CorpusIterator(corpus, dictionary=self._dictionary)
-        )
+        self.train_plain_corpus(CorpusIterator(corpus, dictionary=self._dictionary))
         self.train_tfidf_model()
         self.train_tfidf_corpus()
         self.train_lsi_model()
@@ -299,9 +303,7 @@ class Model:
             os.remove(self.plain_corpus_filename + ".index")
             os.remove(self.tfidf_corpus_filename + ".index")
 
-    def topic_vector(
-        self, lemmas: List[LemmaString]
-    ) -> TopicVector:
+    def topic_vector(self, lemmas: List[LemmaString]) -> TopicVector:
         """ Return a sparse topic vector for a list of lemmas,
             which can contain either "lemma/category" strings or
             ("lemma", "category") tuples. """

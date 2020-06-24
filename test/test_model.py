@@ -34,7 +34,14 @@
 
 import pytest
 
-from greynir_topic import Model, Document, TokenDocument, Corpus, Dictionary
+from greynir_topic import (
+    Model,
+    Document,
+    TokenDocument,
+    ParsedDocument,
+    Corpus,
+    Dictionary,
+)
 from greynir_topic.model import CorpusIterator
 from greynir_topic.tuplemodel import w_from_lemma
 
@@ -58,11 +65,13 @@ def test_basics():
     assert w_from_lemma("að minnsta kosti", "ao") == "að_minnsta_kosti/ao"
     assert w_from_lemma("borgarstjórnar-fundur", "kk") == "borgarstjórnarfundur/kk"
     assert w_from_lemma("Vestur-Þýskaland", "hk") == "vesturþýskaland/hk"  # !!! FIXME
-    assert w_from_lemma("dóms- og kirkjumálaráðherra", "kk") == "dóms_og_kirkjumálaráðherra/kk"  # !!! FIXME
+    assert (
+        w_from_lemma("dóms- og kirkjumálaráðherra", "kk")
+        == "dóms_og_kirkjumálaráðherra/kk"
+    )  # !!! FIXME
 
 
 class DummyDocument(Document):
-
     def __init__(self, lemmas):
         self._lemmas = lemmas
 
@@ -71,17 +80,10 @@ class DummyDocument(Document):
 
 
 class DummyCorpus(Corpus):
-
     def __iter__(self):
-        yield DummyDocument(
-            "maður/kk fara/so út/ao í/fs búð/kvk".split()
-        )
-        yield DummyDocument(
-            "búð/kvk vera/so lokaður/lo".split()
-        )
-        yield DummyDocument(
-            "maður/kk vera/so leiður/lo".split()
-        )
+        yield DummyDocument("maður/kk fara/so út/ao í/fs búð/kvk".split())
+        yield DummyDocument("búð/kvk vera/so lokaður/lo".split())
+        yield DummyDocument("maður/kk vera/so leiður/lo".split())
         yield DummyDocument(
             "hægur/lo vera/so að/nhm kaupa/so matur/kk í/fs búð/kvk".split()
         )
@@ -127,21 +129,61 @@ def test_load(trained_model: Model):
     assert trained_model.similarity(tv2, tv3) > 0.9999
 
 
-class TokenCorpus(Corpus):
+def test_token_document():
+    td = TokenDocument(
+        "Maðurinn fór út í búð með hundinn Xochitl og grátkeypti sér "
+        "ís af Friðjóni Þórðarsyni og Ketilbjörgu Láru Guðmundsdóttur."
+    )
+    z = set(td.gen_tuples())
+    assert ("maður", "kk") in z
+    assert ("búð", "kvk") in z
+    assert ("sig", "abfn") in z
+    assert ("ís", "kk") in z
+    # assert ("grát-kaupa", "so") in z  # Is lemmatized as 'grát-keyptur/lo'
+    assert ("Xochitl", "entity") in z
+    assert ("Friðjón Þórðarson", "person_kk") in z
+    assert ("Ketilbjörg Lára Guðmundsdóttir", "person_kvk") in z
 
+    w = set(td)
+    assert "maður/kk" in w
+    assert "friðjón_þórðarson/person_kk" in w
+    assert "xochitl/entity" in w
+
+
+def test_parsed_document():
+    pd = ParsedDocument(
+        "Maðurinn fór út í búð með hundinn Xochitl og grátkeypti sér "
+        "ís af Friðjóni Þórðarsyni og Ketilbjörgu Láru Guðmundsdóttur."
+    )
+    z = set(pd.gen_tuples())
+    assert ("maður", "kk") in z
+    assert ("út", "ao") in z
+    assert ("í", "fs") in z
+    assert ("búð", "kvk") in z
+    assert ("með", "fs") in z
+    assert ("hundur", "kk") in z
+    assert ("Xochitl", "entity") in z
+    assert ("grát-kaupa", "so") in z
+    assert ("sig", "abfn") in z
+    assert ("ís", "kk") in z
+    assert ("af", "fs") in z
+    assert ("Friðjón Þórðarson", "person_kk") in z
+    assert ("Ketilbjörg Lára Guðmundsdóttir", "person_kvk") in z
+
+    w = set(pd)
+    assert "maður/kk" in w
+    assert "grátkaupa/so" in w
+    assert "friðjón_þórðarson/person_kk" in w
+    assert "ketilbjörg_lára_guðmundsdóttir/person_kvk" in w
+    assert "xochitl/entity" in w
+
+
+class TokenCorpus(Corpus):
     def __iter__(self):
-        yield TokenDocument(
-            "Maður fór út í búð."
-        )
-        yield TokenDocument(
-            "Búðin var lokuð."
-        )
-        yield TokenDocument(
-            "Maðurinn varð leiður."
-        )
-        yield TokenDocument(
-            "Hægt er að kaupa mat í búðum."
-        )
+        yield TokenDocument("Maður fór út í búð.")
+        yield TokenDocument("Búðin var lokuð.")
+        yield TokenDocument("Maðurinn varð leiður.")
+        yield TokenDocument("Hægt er að kaupa mat í búðum.")
 
 
 def test_train_token(model: Model):
