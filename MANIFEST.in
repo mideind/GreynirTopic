@@ -1,0 +1,4 @@
+graft src
+prune src/greynir_topic/__pycache__
+prune src/greynir_topic/.mypy_cache
+prune src/greynir_topic/models
