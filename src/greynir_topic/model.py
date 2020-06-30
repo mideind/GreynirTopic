@@ -194,16 +194,22 @@ class Model:
     def dimensions(self) -> int:
         return self._dimensions
 
-    def train_dictionary(self, corpus_iterator: CorpusIterator, min_count: int) -> None:
+    def train_dictionary(self, corpus_iterator: CorpusIterator, *,
+        min_count: int = 5, max_ratio: float = 0.5) -> None:
         """ Iterate through the document corpus
-            and create a fresh Gensim dictionary """
+            and create a fresh Gensim dictionary. The min_count parameter
+            indicates the minimum number of documents that a word must
+            occur in to be included in the dictionary. The max_ratio
+            parameter specifies the maximum number of documents that a
+            word can occur in to be included in the dictionary, as a fraction
+            of the total corpus size (0.5 = 50% of the documents in the corpus).
+        """
         dic = Dictionary(corpus_iterator)
-        # Drop words that only occur very few times in the entire set
-        if min_count > 0:
-            dic.filter_extremes(no_below=min_count, keep_n=None)
-            # !!! TODO: We may want to use other Gensim filtering
-            # !!! features, such as dropping lemmas that occur in
-            # !!! almost all documents
+        # Drop words that only occur very few times in the entire set,
+        # and words that occur very frequently and are thus not likely
+        # to be significant when indexing or in searches
+        if min_count > 0 or max_ratio < 1.0:
+            dic.filter_extremes(no_below=min_count, no_above=max_ratio, keep_n=None)
         # We must have something in our dictionary
         assert len(dic.token2id) > 0
         dic.save(self.dictionary_filename)
@@ -269,7 +275,9 @@ class Model:
         self._model = models.LsiModel.load(self.lsi_model_filename, mmap="r")
 
     def train(
-        self, corpus: Corpus, *, keep_temp_files: bool = False, min_count: int = 3
+        self, corpus: Corpus, *,
+        keep_temp_files: bool = False,
+        min_count: int = 3, max_ratio: float = 0.5,
     ) -> None:
         """ Go through all training steps for a document corpus,
             ending with an LSI model built on TF-IDF vectors
@@ -288,7 +296,8 @@ class Model:
         except FileExistsError:
             pass
         self.train_dictionary(
-            CorpusIterator(corpus, dictionary=None), min_count=min_count
+            CorpusIterator(corpus, dictionary=None),
+            min_count=min_count, max_ratio=max_ratio,
         )
         self.train_plain_corpus(CorpusIterator(corpus, dictionary=self._dictionary))
         self.train_tfidf_model()

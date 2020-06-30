@@ -46,8 +46,8 @@ import sys
 from glob import glob
 from os.path import basename, dirname, join, splitext
 
-from setuptools import find_packages
-from setuptools import setup
+from setuptools import find_packages  # type: ignore
+from setuptools import setup  # type: ignore
 
 
 if sys.version_info < (3, 5):
@@ -68,7 +68,7 @@ def read(*names, **kwargs):
 setup(
     name="greynir-topic",
     # Remember to update version in src/greynir_topic/__init__.py as well
-    version="0.0.1",
+    version="0.0.2",
     license="MIT",
     description="Text similarity and topic indexing for Icelandic",
     long_description="{0}\n{1}".format(
@@ -110,6 +110,6 @@ setup(
     ],
     keywords=["topic", "similarity", "tf-idf", "lsi", "icelandic"],
     setup_requires=[],
-    install_requires=["gensim==3.8.3", "reynir>=2.3.1"],
+    install_requires=["gensim==3.8.3", "reynir>=2.4.0"],
     entry_points={},
 )

@@ -47,4 +47,4 @@ from .tokenmodel import (
 __author__ = u"Miðeind ehf"
 __copyright__ = "(C) 2020 Miðeind ehf."
 # Remember to update the version in setup.py as well
-__version__ = "0.0.1"
+__version__ = "0.0.2"
