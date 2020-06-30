@@ -277,7 +277,7 @@ class Model:
     def train(
         self, corpus: Corpus, *,
         keep_temp_files: bool = False,
-        min_count: int = 3, max_ratio: float = 0.5,
+        min_count: int = 3, max_ratio: float = 0.5
     ) -> None:
         """ Go through all training steps for a document corpus,
             ending with an LSI model built on TF-IDF vectors
