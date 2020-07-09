@@ -59,7 +59,7 @@ import os
 import sys
 from abc import ABC, abstractmethod
 
-from gensim import corpora, models, matutils  # type: ignore
+from gensim import corpora, models, matutils, similarities  # type: ignore
 
 
 # A TopicVector is a sparse array of floats,
@@ -165,6 +165,7 @@ class Model:
         self._dictionary = None  # type: Optional[Dictionary]
         self._tfidf = None
         self._model = None
+        self._simindex = None
 
     def _filename_from_ext(self, ext: str) -> str:
         """ Return a full file path from a given extension """
@@ -189,6 +190,10 @@ class Model:
     @property
     def lsi_model_filename(self) -> str:
         return self._filename_from_ext("lsi")
+
+    @property
+    def simindex_filename(self) -> str:
+        return self._filename_from_ext("similarity")
 
     @property
     def dimensions(self) -> int:
@@ -268,11 +273,23 @@ class Model:
             **kwargs
         )
         # Save the generated model
+        self._model = lsi
         lsi.save(self.lsi_model_filename)
 
     def load_lsi_model(self) -> None:
         """ Load a previously generated LSI model """
         self._model = models.LsiModel.load(self.lsi_model_filename, mmap="r")
+
+    def remove_temp_files(self) -> None:
+        """ Remove intermediate model files that are only
+            used during training, not during inference
+        """
+        os.remove(self.plain_corpus_filename)
+        os.remove(self.tfidf_corpus_filename)
+        # Also remove additional index files created by Gensim
+        os.remove(self.plain_corpus_filename + ".index")
+        os.remove(self.tfidf_corpus_filename + ".index")
+
 
     def train(
         self, corpus: Corpus, *,
@@ -304,13 +321,7 @@ class Model:
         self.train_tfidf_corpus()
         self.train_lsi_model()
         if not keep_temp_files:
-            # Remove intermediate model files that are only
-            # used during training, not during inference
-            os.remove(self.plain_corpus_filename)
-            os.remove(self.tfidf_corpus_filename)
-            # Also remove additional index files created by Gensim
-            os.remove(self.plain_corpus_filename + ".index")
-            os.remove(self.tfidf_corpus_filename + ".index")
+            self.remove_temp_files()
 
     def topic_vector(self, lemmas: List[LemmaString]) -> TopicVector:
         """ Return a sparse topic vector for a list of lemmas,
@@ -337,3 +348,58 @@ class Model:
     def similarity(topic_vector_a: TopicVector, topic_vector_b: TopicVector) -> float:
         """ Return the cosine similarity of two sparse topic vectors """
         return matutils.cossim(topic_vector_a, topic_vector_b)
+
+
+    def calculate_similarity_index(self) -> None:
+        """ Transform corpus to LSI space and index it """
+        corpus_tfidf = self.load_tfidf_corpus()
+        if self._dictionary is None:
+            self.load_dictionary()
+        assert self._dictionary is not None
+        if self._model is None:
+            self.load_lsi_model()
+        assert self._model is not None
+
+        # Calculate the similarity index
+        simindex = similarities.Similarity(
+            self.simindex_filename,
+            self._model[corpus_tfidf],
+            num_features=len(self._dictionary)
+        )
+
+        # Save the similarity index
+        simindex.save(self.simindex_filename)
+        self._simindex = simindex
+
+    def load_similarity_index(self) -> None:
+        """ Load similarity index to local variable """
+        self._simindex = similarities.Similarity.load(self.simindex_filename)
+
+    def train_similarity(
+        self, corpus: Corpus, *,
+        keep_temp_files: bool = False,
+        min_count: int = 3, max_ratio: float = 0.5
+    ) -> None:
+        """ Train the model for similarity calculations """
+        self.train(corpus, keep_temp_files=True, min_count=min_count, max_ratio=max_ratio)
+        self.calculate_similarity_index()
+        if not keep_temp_files:
+            self.remove_temp_files()
+
+    def nearest_neighbors(self, topic_vector: TopicVector, num_neighbors: int = None, cutoff: float = 0.0) -> List[int]:
+        """ Return a list of indexes for the items in corpus that are most similar to given topic vector.
+            num_neighbors:
+                Number of returned neighbors. If None then return all neighbors with similarity above cutoff.
+            cutoff:
+                A similarity threshold deciding how similar items have to be to be returned.
+                Similarity can be on the range [-1, 1] and default is 0.0
+        """
+        if self._simindex is None:
+            self.load_similarity_index()
+        assert self._simindex is not None
+
+        # Obtain a list of similarities, with one float for each document in the corpus
+        similarities = self._simindex[topic_vector]
+        # Sort into descending order by similarity, maintaining the document indices
+        neighbors = [ix for ix, s in sorted(enumerate(similarities), key=lambda t: -t[1]) if s >= cutoff]
+        return neighbors[:num_neighbors] if num_neighbors else neighbors

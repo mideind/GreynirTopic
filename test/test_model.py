@@ -199,3 +199,12 @@ def test_train_token(model: Model):
     assert model.similarity(tv, tv2) > 0.90
     assert model.similarity(tv2, tv3) > 0.9999
 
+
+def test_similarity_index(model: Model):
+    corpus = TokenCorpus()
+    model.train_similarity(corpus, min_count=0)
+    s = TokenDocument("Maðurinn fór út í búð að kaupa mat")
+    tv = model.topic_vector(s)
+    similarity = model.nearest_neighbors(topic_vector=tv)
+    assert type(similarity) == list
+    assert similarity[0] == 0
