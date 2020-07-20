@@ -44,6 +44,10 @@ from .tokenmodel import (
     ParsedDocument,
 )
 
+from convertToLemmas import (
+    convert_Text
+)
+
 __author__ = u"Miðeind ehf"
 __copyright__ = "(C) 2020 Miðeind ehf."
 # Remember to update the version in setup.py as well
