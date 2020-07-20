@@ -44,7 +44,7 @@ from .tokenmodel import (
     ParsedDocument,
 )
 
-from convertToLemmas import (
+from .convertToLemmas import (
     convert_Text
 )
 
