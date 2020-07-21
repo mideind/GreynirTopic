@@ -1,4 +1,4 @@
-import tokenizer, os, subprocess
+import tokenizer, os, subprocess, csv
 
 class gen_Tokens():
     """
@@ -47,7 +47,8 @@ class gen_Lemmas():
         os.chdir("nefnir-master")
         text = open("../tagged.txt", 'w')
         text.write(self.tagged_text)
-        subprocess.Popen("python3 nefnir.py -i ../tagged.txt -o ../lemmatized.txt -s ' ' ", shell = True)
+        text.close()
+        subprocess.Popen("python3 nefnir.py -i ../tagged.txt -o ../lemmatized.txt -s ' ' ", shell = True).wait()
         os.chdir("..")
 
 class convert_Text():
@@ -64,9 +65,22 @@ class convert_Text():
     
     def lemmatize_Text(self):
         t = self.taggedText.iceTagger_tag()
-        fully_tagged_text = t.communicate()[0].decode('utf-8')
+        fully_tagged_text = t.communicate()[0].decode('utf-8').replace(' <UNKNOWN>','')
         gen_Lemmas(fully_tagged_text).nefnir_Lemmatize()
+        lemmas = open('lemmatized.txt', 'r')
+        reader = csv.reader(lemmas)
+        allRows = [row for row in reader]
+        allLemmas = []
+        for idx, row in enumerate(allRows):
+            if allRows[idx]:
+                if len(allRows[idx][0].split()) == 3:
+                    allLemmas.append(allRows[idx][0].split()[2])
+        lemmas.close()
+        print(allLemmas)
 
     def create_AS_json(self):
         """ Creates a json file containing tokens, lemmas and tags from arnastofnun.is """
         os.system("curl -X POST -F \"text=`cat "+self.filename+"`\" -F \"lemma=on\" -F \"expand_tag=on\" malvinnsla.arnastofnun.is > tokens_arnastofnun.json")
+    
+    
+
