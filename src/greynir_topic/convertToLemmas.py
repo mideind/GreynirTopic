@@ -1,4 +1,4 @@
-import tokenizer, os, subprocess, csv
+import tokenizer, os, subprocess, csv, json
 
 class gen_Tokens():
     """
@@ -80,7 +80,11 @@ class convert_Text():
 
     def create_AS_json(self):
         """ Creates a json file containing tokens, lemmas and tags from arnastofnun.is """
-        os.system("curl -X POST -F \"text=`cat "+self.filename+"`\" -F \"lemma=on\" -F \"expand_tag=on\" malvinnsla.arnastofnun.is > tokens_arnastofnun.json")
-    
-    
+        os.system("curl -X POST -F \"text=`cat "+self.filename+"`\" -F \"lemma=on\" -F \"expand_tag=on\" malvinnsla.arnastofnun.is > text_arnastofnun.json")
+        with open('text_arnastofnun.json') as f:
+            data = json.load(f)
+        for paragraph in data['paragraphs']:
+            for sentence in paragraph['sentences']:
+                for lemmas in sentence:
+                    print(lemmas['lemma'])
 
