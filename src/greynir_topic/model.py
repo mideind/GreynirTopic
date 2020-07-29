@@ -293,6 +293,7 @@ class Model:
 
     def train(
         self, corpus: Corpus, *,
+        dictionary: Dictionary = None,
         keep_temp_files: bool = False,
         min_count: int = 3, max_ratio: float = 0.5
     ) -> None:
@@ -301,6 +302,8 @@ class Model:
             for each document.
             corpus:
                 The document corpus to train the model on
+            dictionary:
+                The dictionary to be used if it was pre-calculated
             keep_temp_files:
                 If True, do not delete intermediate model files after training
             min_count:
@@ -312,10 +315,13 @@ class Model:
             os.makedirs(self._DIRECTORY)
         except FileExistsError:
             pass
-        self.train_dictionary(
-            CorpusIterator(corpus, dictionary=None),
-            min_count=min_count, max_ratio=max_ratio,
-        )
+        if dictionary is None:
+            self.train_dictionary(
+                CorpusIterator(corpus, dictionary=None),
+                min_count=min_count, max_ratio=max_ratio,
+            )
+        else:
+            self._dictionary = dictionary
         self.train_plain_corpus(CorpusIterator(corpus, dictionary=self._dictionary))
         self.train_tfidf_model()
         self.train_tfidf_corpus()
@@ -377,11 +383,16 @@ class Model:
 
     def train_similarity(
         self, corpus: Corpus, *,
+        dictionary: Dictionary = None,
         keep_temp_files: bool = False,
         min_count: int = 3, max_ratio: float = 0.5
     ) -> None:
-        """ Train the model for similarity calculations """
-        self.train(corpus, keep_temp_files=True, min_count=min_count, max_ratio=max_ratio)
+        """ Train the model for similarity calculations.
+            This is function has the same parameters as the 'self.train' function
+            but adds an extra layer that calculates the similarity matrix
+            for similarity comparison.
+        """
+        self.train(corpus, dictionary=dictionary, keep_temp_files=True, min_count=min_count, max_ratio=max_ratio)
         self.calculate_similarity_index()
         if not keep_temp_files:
             self.remove_temp_files()
