@@ -44,8 +44,8 @@ from .tokenmodel import (
     ParsedDocument,
 )
 
-from .convertToLemmas import (
-    convert_Text
+from .text_to_lemmas import (
+    ConvertText
 )
 
 __author__ = u"Miðeind ehf"
