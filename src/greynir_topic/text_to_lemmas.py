@@ -14,26 +14,19 @@ class GenTokens():
 
 class GenTaggedText():
     """
-        This class takes in a tokenized text and relies on IceNLP to be installed as
-        a subfolder in the programmers GreynirTopic directory.
-        It then creates a text file containing the tokenized text and then tags it and 
-        returns a subprocess.Popen object which contains the tagged text.
-        This is temporary and will be replaced.
+        This class takes in a tokenized text and uses a docker version of POS tagger
+        for Icelandic (see https://github.com/cadia-lvl/POS#Contributing). 
+        The tagger creates a .tsv file named tagged.tsv containing the tagged text.
     """
     def __init__(self, tokenized_text):
-        self.tokenized_text = tokenized_text
+        self.tokenized_text = tokenized_text.split()
     
-    def icetagger_tag(self):
-        """ IceTagger is a temporary tagger. To be replaced by a more suitible tagger """
-        os.chdir("IceNLP")
-        os.chdir("bat")
-        os.chdir("icetagger")
-        with open("tokenized.txt", 'w') as f:
-            f.write(self.tokenized_text)
-        pipe = subprocess.Popen("cat 'tokenized.txt' | ./icetagger.sh -of 1", stdout=subprocess.PIPE,stderr=None, shell=True)
-        for _ in range(3):
-            os.chdir("..")
-        return pipe
+    def postagger_tag(self):
+        with open("tokenized_untagged.tsv", 'w') as f:
+            for word in self.tokenized_text:
+                f.write(word)
+                f.write('\n')
+        subprocess.Popen("cat tokenized_untagged.tsv | docker run -i haukurp/pos - - > tagged.tsv", stderr=None, shell=True).wait()
 
 class GenLemmas():
     """ 
@@ -44,17 +37,13 @@ class GenLemmas():
         self.tagged_text = tagged_text
     
     def nefnir_lemmatize(self):
-        os.chdir("nefnir-master")
-        with open("../tagged.txt", 'w') as f:
-            f.write(self.tagged_text)
-        subprocess.Popen("python3 nefnir.py -i ../tagged.txt -o ../lemmatized.txt -s ' ' ", shell = True).wait()
-        os.chdir("..")
+        subprocess.Popen("python3 nefnir.py -i tagged.tsv -o lemmatized.txt", shell = True).wait()
 
 class ConvertText():
     """
         This class tokenizes, tags and lemmatizes a text file. As of now it relies on being
-        initialized from the programmers GreynirTopic directory with the text file in the same
-        directory and IceTagger and nefnir-master as subfolders but it will be simplified.
+        initialized from the programmers GreynirTopic directory with the text file and nefnir 
+        in the same directory.
         It's also possible to get a json file from arnastofnun.is by calling create_as_json.
     """
     def __init__(self, filename):
@@ -63,8 +52,9 @@ class ConvertText():
         self.tagged_text = GenTaggedText(self.tok_text)
     
     def lemmatize_text(self):
-        t = self.tagged_text.icetagger_tag()
-        fully_tagged_text = t.communicate()[0].decode('utf-8').replace(' <UNKNOWN>','')
+        self.tagged_text.postagger_tag()
+        with open('tagged.tsv', 'r') as f:
+            fully_tagged_text = csv.reader(f)
         GenLemmas(fully_tagged_text).nefnir_lemmatize()
         with open('lemmatized.txt', 'r') as f:
             reader = csv.reader(f)
@@ -76,6 +66,7 @@ class ConvertText():
                     all_lemmas.append(all_rows[idx][0].split()[2])
         print(all_lemmas)
         print(len(all_lemmas))
+        
 
     def create_as_json(self):
         """ Creates a json file containing tokens, lemmas and tags from arnastofnun.is """
