@@ -27,6 +27,9 @@ class GenTaggedText():
                 f.write(word)
                 f.write('\n')
         subprocess.Popen("cat tokenized_untagged.tsv | docker run -i haukurp/pos - - > tagged.tsv", stderr=None, shell=True).wait()
+        with open('tagged.tsv', 'r') as f:
+            fully_tagged_text = csv.reader(f)
+        return fully_tagged_text
 
 class GenLemmas():
     """ 
@@ -37,7 +40,11 @@ class GenLemmas():
         self.tagged_text = tagged_text
     
     def nefnir_lemmatize(self):
-        subprocess.Popen("python3 nefnir.py -i tagged.tsv -o lemmatized.txt", shell = True).wait()
+        subprocess.Popen("python3 nefnir.py -i tagged.tsv -o lemmatized.tsv", shell = True).wait()
+        with open('lemmatized.tsv', 'r') as f:
+            reader = csv.reader(f)
+            all_rows = [row for row in reader]
+        return all_rows
 
 class ConvertText():
     """
@@ -52,13 +59,8 @@ class ConvertText():
         self.tagged_text = GenTaggedText(self.tok_text)
     
     def lemmatize_text(self):
-        self.tagged_text.postagger_tag()
-        with open('tagged.tsv', 'r') as f:
-            fully_tagged_text = csv.reader(f)
-        GenLemmas(fully_tagged_text).nefnir_lemmatize()
-        with open('lemmatized.txt', 'r') as f:
-            reader = csv.reader(f)
-            all_rows = [row for row in reader]
+        fully_tagged_text = self.tagged_text.postagger_tag()
+        all_rows = GenLemmas(fully_tagged_text).nefnir_lemmatize()
         all_lemmas = list()
         for idx, row in enumerate(all_rows):
             if all_rows[idx]:
